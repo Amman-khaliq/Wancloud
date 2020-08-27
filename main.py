@@ -2,10 +2,15 @@ from flask import Flask,request,jsonify, abort, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_httpauth import HTTPBasicAuth
-import models
+from blueprints import LF_blueprint
+#from blueprints.items import item_model, add_item_view
+
+#LFblueprint = Blueprint('LF_blueprint', __name__)
 
 #Setting up the connection
 app = Flask(__name__)
+#app.register_blueprint(LF_blueprint.blueprintt)
+#app.register_blueprint(models.models)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:''@localhost/wancloudDB'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -28,10 +33,6 @@ db.create_all()
 
 
 
-item_schema = models.ItemSchema()
-items_schema = models.ItemSchema(many=True)
-user_schema = models.UserSchema()
-
 
 #This signs up a new user
 @app.route('/signup', methods=['POST'])
@@ -42,10 +43,10 @@ def new_user():
     number = request.json.get('number')
     if username is None or password is None:
         abort(400)    # missing arguments
-    if models.User.query.filter_by(username=username).first() is not None:
+    if LF_blueprint.User.query.filter_by(username=username).first() is not None:
         abort(400)
         # existing user
-    user = models.User(username, name, password, number)
+    user = LF_blueprint.User(username, name, password, number)
     user.hash_password(password)
     db.session.add(user)
     db.session.commit()
@@ -58,45 +59,47 @@ def new_user():
 def login_user():
     username = request.json.get('username')
     password = request.json.get('password_hash')
-    userr = models.User.query.get(username)
+    userr = LF_blueprint.User.query.get(username)
     if userr.verify_password(password):
         login_check = True
         return("logged in")
     else:
-        return("Try Again with correct email and password")
+        return("Try Again with correct username and password")
+
+
 
 
 #This adds a new item into the lost and found
-
 @app.route('/items',methods = ['POST'])
 def create_item():
     name = request.json['name']
     location = request.json['location_item']
     description = request.json['description']
     date = request.json['datee']
-    nItem = models.Item(name,location,description,date)
+    nItem = LF_blueprint.Item(name, location, description, date)
     db.session.add(nItem)
     db.session.commit()
-    return items_schema.jsonify(nItem)
+    return LF_blueprint.items_schema.jsonify(nItem)
+
 
 
 #To get all items in the lost and found
 @app.route('/items',methods = ['GET'])
 def get_item():
-    allitems = models.Item.query.all()
-    result = items_schema.dump(allitems)
+    allitems = LF_blueprint.Item.query.all()
+    result = LF_blueprint.items_schema.dump(allitems)
     return jsonify(result)
 
 #Get specific item
 @app.route('/items/<id>',methods = ['GET'])
 def get_item1(id):
-    item = models.Item.query.get(id)
-    return item_schema.jsonify(item)
+    item = LF_blueprint.Item.query.get(id)
+    return LF_blueprint.item_schema.jsonify(item)
 
 #to update an item
 @app.route('/items/<id>',methods = ['PUT'])
 def update_item(id):
-    item = models.Item.query.get(id)
+    item = LF_blueprint.Item.query.get(id)
     name = request.json['name']
     location = request.json['location_item']
     description = request.json['description']
@@ -107,15 +110,15 @@ def update_item(id):
     item.datee = date
 
     db.session.commit()
-    return item_schema.jsonify(item)
+    return LF_blueprint.item_schema.jsonify(item)
 
 #To delete an item
 @app.route('/items/<id>',methods = ['DELETE'])
 def delete_item(id):
-    item = models.Item.query.get(id)
+    item = LF_blueprint.Item.query.get(id)
     db.session.delete(item)
     db.session.commit()
-    return item_schema.jsonify(item)
+    return LF_blueprint.item_schema.jsonify(item)
 
 if __name__ == "__main__":
     app.run(debug = True)
